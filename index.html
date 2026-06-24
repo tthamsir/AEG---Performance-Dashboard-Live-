@@ -86,8 +86,9 @@ select:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-co
 .scope b{color:var(--ink);font-weight:600}
 
 /* KPI */
-.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
-@media (max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr)}}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.kpis-aux{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:14px}
+@media (max-width:1180px){.kpis,.kpis-aux{grid-template-columns:repeat(2,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   padding:18px 20px 16px;position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
@@ -244,6 +245,7 @@ footer.foot b{color:var(--muted)}
 
   <section class="tabpanel" id="tab-overview" role="tabpanel">
   <div class="kpis" id="kpis"></div>
+  <div class="kpis-aux" id="kpis-aux"></div>
   </section>
 
   <section class="tabpanel" id="tab-graphs" role="tabpanel" hidden>
@@ -494,7 +496,7 @@ function renderKPIs(c){
   const mtdTag=a.mtdTag||('MTD · '+mLabel);
   const ytdTag=a.ytdTag||('YTD · '+yrPfx()+yrOf(c.latest));
   const ppStr=d=>(d>=0?'+':'−')+(Math.abs(d)*100).toFixed(1)+'pp';
-  el.innerHTML=cards.map(cd=>{
+  const renderCard=cd=>{
     const gv=o=>o==null?null:(cd.calc?cd.calc(o):o[cd.key]);
     const mC=gv(mtd), yC=gv(ytd), mP=gv(mtdPrior), yP=gv(ytdPrior);
     if(cd.single){
@@ -538,7 +540,10 @@ function renderKPIs(c){
         </div>
       </div>
     </div>`;
-  }).join('');
+  };
+  el.innerHTML=cards.filter(cd=>!cd.single).map(renderCard).join('');
+  const aux=document.getElementById('kpis-aux');
+  if(aux) aux.innerHTML=cards.filter(cd=>cd.single).map(renderCard).join('');
 }
 
 // ---------- Graphs tab ----------
