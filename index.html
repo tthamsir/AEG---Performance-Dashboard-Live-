@@ -86,7 +86,8 @@ select:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-co
 .scope b{color:var(--ink);font-weight:600}
 
 /* KPI */
-.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-top:18px}
+.kpis{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-top:18px}
+@media (max-width:1280px){.kpis{grid-template-columns:repeat(3,1fr)}}
 .kpi{background:var(--card);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--shadow);
   padding:18px 20px 16px;position:relative;overflow:hidden}
 .kpi::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--brand)}
@@ -94,6 +95,9 @@ select:focus-visible{outline:2px solid var(--brand);outline-offset:1px;border-co
 .kpi .kicon{width:22px;height:22px;color:var(--brand)}
 .krow{display:flex;gap:20px}
 .kcell{flex:1}
+.kcell-single{display:flex;flex-direction:column;justify-content:center}
+.kcell-single .val{font-size:34px;margin-top:2px}
+.kcell-single .na{color:var(--faint);font-weight:500}
 .kcell .tag{font-size:10.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);font-weight:600;margin-bottom:3px}
 .kcell .val{font-family:'Space Grotesk';font-weight:600;font-size:27px;letter-spacing:-.5px;color:var(--ink);line-height:1.05}
 .kcell .sub{font-size:11px;color:var(--muted);margin-top:2px}
@@ -412,7 +416,8 @@ const ICONS={
  rev:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>',
  enc:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>',
  tik:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></svg>',
- chg:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>'
+ chg:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="9" y1="13" x2="15" y2="13"/><line x1="9" y1="17" x2="15" y2="17"/></svg>',
+ coll:'<svg class="kicon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>'
 };
 
 function inScopeLoc(li){
@@ -468,6 +473,11 @@ function alignKPI(c){
       mtdTag:'MTD · FY'+String(yr).slice(2)+' '+wkRange, ytdTag:'YTD · FY'+String(yr).slice(2)+' Wk 1–'+latestWk};
   }
 }
+function pillPP(diff){
+  if(diff==null)return '<span class="pill flat">— n/a</span>';
+  const up=diff>=0, cls=Math.abs(diff)<0.00005?'flat':(up?'up':'dn'), ar=cls==='flat'?'':(up?'▲':'▼');
+  return '<span class="pill '+cls+'">'+ar+' '+(Math.abs(diff)*100).toFixed(1)+'pp</span>';
+}
 function renderKPIs(c){
   const el=document.getElementById('kpis');
   const mLabel=MONTHS[c.lm-1]+' '+yrOf(c.latest);
@@ -475,31 +485,56 @@ function renderKPIs(c){
     {key:'chg',lab:'Gross Charges',icon:ICONS.chg,fmt:fmtCompact},
     {key:'rev',lab:'Total Revenue',icon:ICONS.rev,fmt:fmtCompact},
     {key:'enc',lab:'Total Encounters',icon:ICONS.enc,fmt:fmtNum},
-    {key:'tik',lab:'Avg Ticket Price',icon:ICONS.tik,fmt:fmtTik}
+    {key:'tik',lab:'Avg Ticket Price',icon:ICONS.tik,fmt:fmtTik},
+    {key:'coll',lab:'Adj. Collection %',icon:ICONS.coll,calc:o=>o.chg?o.rev/o.chg:0,fmt:v=>(v*100).toFixed(1)+'%',single:true}
   ];
   const a=alignKPI(c)||{};
   const mtd=a.mtd||c.mtd, ytd=a.ytd||c.ytd;
   const mtdPrior=('mtdPrior' in a)?a.mtdPrior:c.mtdPrior, ytdPrior=('ytdPrior' in a)?a.ytdPrior:c.ytdPrior;
   const mtdTag=a.mtdTag||('MTD · '+mLabel);
   const ytdTag=a.ytdTag||('YTD · '+yrPfx()+yrOf(c.latest));
+  const ppStr=d=>(d>=0?'+':'−')+(Math.abs(d)*100).toFixed(1)+'pp';
   el.innerHTML=cards.map(cd=>{
-    const mtdP=pct(mtd[cd.key], mtdPrior?mtdPrior[cd.key]:null);
-    const ytdP=pct(ytd[cd.key], ytdPrior?ytdPrior[cd.key]:null);
-    const subLine=(cur,prior)=>prior==null?'no prior-year data':('PY '+cd.fmt(prior)+'  ·  Δ '+(cur-prior>=0?'+':'−')+cd.fmt(Math.abs(cur-prior)));
-    const mP=mtdPrior?mtdPrior[cd.key]:null, yP=ytdPrior?ytdPrior[cd.key]:null;
+    const gv=o=>o==null?null:(cd.calc?cd.calc(o):o[cd.key]);
+    const mC=gv(mtd), yC=gv(ytd), mP=gv(mtdPrior), yP=gv(ytdPrior);
+    if(cd.single){
+      const allDeals = state.deal==='all';
+      const tag = allDeals ? 'Select a single deal' : mtdTag;
+      const val = allDeals ? '<span class="na">n/a</span>' : cd.fmt(mC);
+      return `<div class="kpi">
+      <div class="klab">${cd.icon}${cd.lab}</div>
+      <div class="krow">
+        <div class="kcell kcell-single">
+          <div class="tag">${tag}</div>
+          <div class="val num">${val}</div>
+        </div>
+      </div>
+    </div>`;
+    }
+    let mPill,yPill,mSub,ySub;
+    if(cd.pp){
+      const dM=(mP==null)?null:mC-mP, dY=(yP==null)?null:yC-yP;
+      mPill=pillPP(dM); yPill=pillPP(dY);
+      mSub=(mP==null)?'no prior-year data':('PY '+cd.fmt(mP)+'  ·  Δ '+ppStr(dM));
+      ySub=(yP==null)?'no prior-year data':('PY '+cd.fmt(yP)+'  ·  Δ '+ppStr(dY));
+    } else {
+      mPill=pillHTML(pct(mC,mP)); yPill=pillHTML(pct(yC,yP));
+      mSub=(mP==null)?'no prior-year data':('PY '+cd.fmt(mP)+'  ·  Δ '+(mC-mP>=0?'+':'−')+cd.fmt(Math.abs(mC-mP)));
+      ySub=(yP==null)?'no prior-year data':('PY '+cd.fmt(yP)+'  ·  Δ '+(yC-yP>=0?'+':'−')+cd.fmt(Math.abs(yC-yP)));
+    }
     return `<div class="kpi">
       <div class="klab">${cd.icon}${cd.lab}</div>
       <div class="krow">
         <div class="kcell">
           <div class="tag">${mtdTag}</div>
-          <div class="val num">${cd.fmt(mtd[cd.key])}</div>
-          ${pillHTML(mtdP)}<div class="sub">${subLine(mtd[cd.key],mP)}</div>
+          <div class="val num">${cd.fmt(mC)}</div>
+          ${mPill}<div class="sub">${mSub}</div>
         </div>
         <div class="kdiv"></div>
         <div class="kcell">
           <div class="tag">${ytdTag}</div>
-          <div class="val num">${cd.fmt(ytd[cd.key])}</div>
-          ${pillHTML(ytdP)}<div class="sub">${subLine(ytd[cd.key],yP)}</div>
+          <div class="val num">${cd.fmt(yC)}</div>
+          ${yPill}<div class="sub">${ySub}</div>
         </div>
       </div>
     </div>`;
